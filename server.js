@@ -1,26 +1,12 @@
 var express = require('express');
 var bodyParser = require('body-parser');
+var _ = require('underscore');
 var app = express();
 var PORT = process.env.PORT || 3000;
 var todos = [];
 var todoNextId = 1;
 
 app.use(bodyParser.json());
-
-// The collect function combines two objects together.
-// function collect() {
-//   var ret = {};
-//   var len = arguments.length;
-//   var p;
-//   for (var i=0; i<len; i++) {
-//     for (p in arguments[i]) {
-//       if (arguments[i].hasOwnProperty(p)) {
-//         ret[p] = arguments[i][p];
-//       }
-//     }
-//   }
-//   return ret;
-// }
 
 app.get('/', function (req, res) {
     res.send('To Do API root');
@@ -36,13 +22,7 @@ app.get('/todos', function (req, res) {
 // Todos GET ID
 app.get('/todos/:id', function (req, res) {
 	var todoId = parseInt(req.params.id, 10);
-	var matchedId;
-
-	todos.forEach(function (todo) {
-		if (todoId === todo.id) {
-			matchedId = todo;
-		}
-	});
+	var matchedId = _.findWhere(todos, {id: todoId});
 
 	if (matchedId) {
 		res.json(matchedId);
@@ -53,13 +33,19 @@ app.get('/todos/:id', function (req, res) {
 
 //Todos Post /post
 app.post('/todos', function (req, res) {
-	var body = req.body;
-	// var id = {"id": + todoNextId};
-	// var toPush = collect(id, body);
+	var body = _.pick(req.body, 'description', 'completed'); //picks only description and completed from req.body.
+
+	//if description and completed are not available and the description is null return bad request
+	if (!_.isBoolean(body.completed) || !_.isString(body.description) || body.description.trim().length === 0) {
+		return res.status(400).send();
+	}
+
+	//trim spaces in the description
+	body.description = body.description.trim();
+
 	body.id = todoNextId++; // inserts a new field into the object 'id'.
 
 	todos.push(body);
-	// todoNextId++;
 
 	res.json(body);
 });

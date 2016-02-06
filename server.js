@@ -31,7 +31,7 @@ app.get('/todos/:id', function (req, res) {
 	}
 });
 
-//Todos Post /post
+//Todos Post /todos
 app.post('/todos', function (req, res) {
 	var body = _.pick(req.body, 'description', 'completed'); //picks only description and completed from req.body.
 
@@ -48,6 +48,20 @@ app.post('/todos', function (req, res) {
 	todos.push(body);
 
 	res.json(body);
+});
+
+// Delete /todos/:id
+app.delete('/todos/:id', function (req, res) {
+	var todoId = parseInt(req.params.id, 10);
+	var matchedId = _.findWhere(todos, {id: todoId});
+
+	if (matchedId) {
+		todos = _.without(todos, matchedId);
+	} else {
+		res.status(404).send('Id not found');
+	}
+
+	res.json(matchedId);
 });
 
 app.listen(PORT, function () {

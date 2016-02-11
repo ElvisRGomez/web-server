@@ -14,6 +14,7 @@
   "license": "ISC",
   "homepage": "https://bitbucket.org/Gomezer/todo-api#readme",
   "dependencies": {
+    "bcrypt": "^0.8.5",
     "body-parser": "^1.13.3",
     "express": "^4.13.3",
     "pg": "^4.4.1",

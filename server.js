@@ -20,7 +20,9 @@ app.get('/', function (req, res) {
 // Todos GET /todos
 app.get('/todos', middleware.requireAuthentication, function (req, res) {
 	var query = req.query;
-	var where = {};
+	var where = {
+		userId: req.user.get('id')
+	};
 	
 	if (query.hasOwnProperty('completed') && query.completed === 'true') {
 		where.completed = true;
@@ -46,7 +48,12 @@ app.get('/todos', middleware.requireAuthentication, function (req, res) {
 app.get('/todos/:id', middleware.requireAuthentication, function (req, res) {
 	var todoId = parseInt(req.params.id, 10);
 	
-	db.todo.findById(todoId).then(function (todo) {
+	db.todo.findByOne({
+		where: {
+			userId: req.user.get('id'),
+			id: todoId
+		}
+	}).then(function (todo) {
 		if (!!todo) { //the double exclamation turns todo into a true boolean.
 			res.json(todo.toJSON());
 		} else {
@@ -62,7 +69,12 @@ app.post('/todos', middleware.requireAuthentication, function (req, res) {
 	var body = _.pick(req.body, 'description', 'completed'); //picks only description and completed from req.body.
 	
 	db.todo.create (body).then(function (todo) {
-		res.json(todo.toJSON());
+		
+		req.user.addTodo(todo).then(function () {
+			return todo.reload();
+		}).then(function (todo) {
+			res.json(todo.toJSON());
+		});
 	}, function (e) {
 		res.status(400).json(e);
 	});
@@ -72,15 +84,18 @@ app.post('/todos', middleware.requireAuthentication, function (req, res) {
 app.delete('/todos/:id', middleware.requireAuthentication, function (req, res) {
 	var todoId = parseInt(req.params.id, 10);
 	
-	db.todo.findById(todoId).then(function (todo) {
-		if (!!todo) {
-			todo.destroy().then(function (todo) {
-				res.status(204).send();
-			}, function (e) {
-				res.status(400).json(e);
+	db.todo.destroy({
+		where: {
+			userId: req.user.get('id'),
+			id: todoId
+		}
+	}).then(function (rowsDeleted) {
+		if (rowsDeleted === 0) {
+			res.status(404).json({
+				error: 'No todo with id'
 			});
 		} else {
-			res.status(404).send('Id not found!');
+			res.status(204).send('Id not found!');
 		}
 	}, function (e) {
 		res.status(500).json(e);
@@ -101,7 +116,12 @@ app.put('/todos/:id', middleware.requireAuthentication, function (req, res) {
 		attributes.description = body.description;
 	}
 	
-	db.todo.findById(todoId).then(function (todo) {
+	db.todo.findByOne({
+		where: {
+			userId: req.user.get('id'),
+			id: todoId
+		}
+	}).then(function (todo) {
 		if (!!todo) {
 			todo.update(attributes).then(function (todo) {
 				res.json(todo.toJSON());
@@ -143,7 +163,7 @@ app.post('/users/login', function (req, res) {
 	});
 });
 
-db.sequelize.sync().then(function () {
+db.sequelize.sync({force: true}).then(function () {
 	app.listen(PORT, function () {
 	    console.log('Express listening on port ' + PORT + '!');
 	});
